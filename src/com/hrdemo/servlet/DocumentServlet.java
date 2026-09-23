@@ -112,7 +112,19 @@ public class DocumentServlet extends HttpServlet {
     }
 
     private String escape(String s) {
-        return s == null ? "" : s.replace("\"", "\\\"").replace("\n", "\\n");
+        if (s == null) {
+            return "";
+        }
+        // Prevent user content and repository messages from breaking the JSON
+        // response. Production code should serialize a response DTO with
+        // Jackson or JSON-B instead of building JSON manually.
+        return s.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\b", "\\b")
+                .replace("\f", "\\f")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t");
     }
 
     private String toJsonArray(List<String> items) {

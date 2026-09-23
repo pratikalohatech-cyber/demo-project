@@ -113,3 +113,61 @@ and watch `getVersionHistory` fail), and fixing the dependency setup
 yourself. That hands-on debugging is what will actually make the JCR and
 Servlet answers in your prep doc sound like lived experience rather than
 memorized theory.
+
+## Request flow: follow one request end to end
+
+Use this sequence when reading the code:
+
+1. **Tomcat receives the HTTP request.** `web/WEB-INF/web.xml` maps the URL
+   to a servlet and defines the filter order.
+2. **`LoggingFilter` runs first.** It records the request, calls
+   `chain.doFilter()`, and then records the response duration while the
+   call stack unwinds.
+3. **`AuthFilter` may run next.** It protects `/employee` and `/document`.
+   An invalid token ends the request with HTTP 401; a valid token lets the
+   request continue.
+4. **The servlet handles the use case.** `EmployeeServlet` and
+   `ShiftServlet` use in-memory maps. `DocumentServlet` translates HTTP
+   parameters into calls to `DocumentRepository`.
+5. **The repository performs persistence work.** Jackrabbit opens a JCR
+   session, reads or changes nodes, saves/checks in changes, and logs out in
+   a `finally` block.
+6. **The response travels back through the filters.** The logging filter
+   prints the elapsed time, and Tomcat sends the JSON/JSP response to the
+   client.
+
+For the browser flow, open `web/shift-planner.jsp`: the page loads
+`web/js/shift-planner.js`, which calls `GET /api/shifts`, creates Fabric.js
+objects, snaps a dragged object to a grid, animates it with GSAP, and sends
+the final position to `POST /api/shifts`.
+
+## How a production system would evolve this demo
+
+This project intentionally shows the plumbing, not production defaults. In a
+real deployment, review these boundaries:
+
+| Demo choice | Production replacement | Why |
+|---|---|---|
+| Hardcoded token in `web.xml` | OIDC/Keycloak or another identity provider | Tokens must be signed, expired, scoped, and auditable. |
+| `System.out.println` logging | SLF4J + Logback/Log4j2 with request IDs | Centralized, structured logs are searchable and correlate one request. |
+| Manual JSON strings | Jackson or JSON-B DTOs | Prevents malformed JSON and escaping vulnerabilities. |
+| In-memory employee/shift maps | Service + repository layer backed by PostgreSQL | Data must survive restarts and support transactions/indexes. |
+| One servlet doing validation and orchestration | Controller → service → repository layers | Separates HTTP concerns, business rules, and persistence. |
+| `TransientRepository("repository-home")` | Configured, persistent JCR with backups and monitoring | Transient storage is for demos and local development only. |
+| Query/form values used directly in paths | Strict validation and canonical path/name handling | Prevents invalid nodes and path traversal. |
+| `catch (Exception)` with raw messages | Typed exception mapping and safe public error responses | Clients should not receive internal repository details. |
+| No automated tests | Unit, servlet integration, and browser/API tests | Makes filter order, concurrency, and versioning behavior repeatable. |
+
+The useful production mental model is **Controller → Service → Repository**:
+the servlet is the controller, a missing service layer is what you would add
+for business rules, and `DocumentRepository` is the persistence adapter.
+Filters remain cross-cutting infrastructure around that flow rather than
+containing business logic.
+
+## Important compatibility note
+
+The source uses `InputStream.readAllBytes()`, which requires Java 9 or newer.
+Although the original setup mentions JDK 8, use JDK 11 for the least
+surprising legacy-Tomcat compatibility, or replace that call with a buffered
+read if Java 8 support is required. The project still requires the matching
+Tomcat Servlet API and Jackrabbit dependency versions in `lib/`.

@@ -32,6 +32,22 @@ public class Employee {
 
     public String toJson() {
         return String.format("{\"id\":\"%s\",\"name\":\"%s\",\"department\":\"%s\"}",
-                id, name, department);
+                escapeJson(id), escapeJson(name), escapeJson(department));
+    }
+
+    // Keep JSON valid when user-provided values contain quotes, slashes, or
+    // line breaks. A production application should use Jackson or JSON-B
+    // instead of maintaining a serializer by hand.
+    private String escapeJson(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\b", "\\b")
+                .replace("\f", "\\f")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t");
     }
 }
