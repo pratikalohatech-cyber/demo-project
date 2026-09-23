@@ -1,0 +1,15 @@
+# Build and deployment output
+/build/
+/dist/
+/repository-home/
+
+# Local dependency jars
+/lib/*.jar
+
+# IDE files
+/.idea/
+*.iml
+
+# OS/editor files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns="http://xmlns.jcp.org/xml/ns/javaee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee
+         http://xmlns.jcp.org/xml/ns/javaee/web-app_3_1.xsd"
+         version="3.1">
+
+    <display-name>HR Demo - Legacy Java Stack + JCR</display-name>
+
+    <!-- ================= FILTERS ================= -->
+    <!-- Filters run in the order declared here, before the request reaches any servlet -->
+
+    <filter>
+        <filter-name>LoggingFilter</filter-name>
+        <filter-class>com.hrdemo.filter.LoggingFilter</filter-class>
+    </filter>
+    <filter-mapping>
+        <filter-name>LoggingFilter</filter-name>
+        <url-pattern>/*</url-pattern>
+    </filter-mapping>
+
+    <filter>
+        <filter-name>AuthFilter</filter-name>
+        <filter-class>com.hrdemo.filter.AuthFilter</filter-class>
+        <init-param>
+            <!-- demo-only: in a real app this would validate a Keycloak/SSO token -->
+            <param-name>demoToken</param-name>
+            <param-value>demo-secret-token</param-value>
+        </init-param>
+    </filter>
+    <filter-mapping>
+        <filter-name>AuthFilter</filter-name>
+        <url-pattern>/employee/*</url-pattern>
+        <url-pattern>/document/*</url-pattern>
+    </filter-mapping>
+
+    <!-- ================= SERVLETS ================= -->
+
+    <servlet>
+        <servlet-name>EmployeeServlet</servlet-name>
+        <servlet-class>com.hrdemo.servlet.EmployeeServlet</servlet-class>
+        <load-on-startup>1</load-on-startup>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>EmployeeServlet</servlet-name>
+        <url-pattern>/employee</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>DocumentServlet</servlet-name>
+        <servlet-class>com.hrdemo.servlet.DocumentServlet</servlet-class>
+        <load-on-startup>2</load-on-startup>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>DocumentServlet</servlet-name>
+        <url-pattern>/document</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>ShiftServlet</servlet-name>
+        <servlet-class>com.hrdemo.servlet.ShiftServlet</servlet-class>
+        <load-on-startup>3</load-on-startup>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>ShiftServlet</servlet-name>
+        <url-pattern>/api/shifts</url-pattern>
+    </servlet-mapping>
+
+    <!-- JCR repository lifecycle - starts Jackrabbit when the app starts, shuts it down cleanly on undeploy -->
+    <listener>
+        <listener-class>com.hrdemo.jcr.RepositoryStartupListener</listener-class>
+    </listener>
+
+    <!-- ================= SESSION CONFIG ================= -->
+    <session-config>
+        <session-timeout>30</session-timeout>
+        <cookie-config>
+            <http-only>true</http-only>
+            <secure>false</secure> <!-- would be true behind HTTPS in real deployment -->
+        </cookie-config>
+    </session-config>
+
+    <welcome-file-list>
+        <welcome-file>index.jsp</welcome-file>
+    </welcome-file-list>
+
+    <error-page>
+        <error-code>500</error-code>
+        <location>/error.jsp</location>
+    </error-page>
+
+</web-app>
